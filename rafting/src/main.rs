@@ -6,12 +6,17 @@ use socket::Socket;
 
 #[tokio::main]
 async fn main() {
-    let socket_range = Socket::from_range(vec![3000, 3001, 3002]);
-    let listener = TcpListener::bind(socket_range.to_slice()).await.unwrap();
-    let port = listener.local_addr().unwrap().port();
+    let ports = vec![3000, 3001];
+    let mut socket_range = Socket::from_range(ports.clone());
 
-    println!("Listening on {:?}", port);
+    let listener = socket_range.bind().await;
 
+    tokio::spawn(async move {
+        listen(listener).await;
+    });
+}
+
+async fn listen(listener: TcpListener) {
     loop {
         let (socket, _) = listener.accept().await.unwrap();
 
