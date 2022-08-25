@@ -1,7 +1,7 @@
 use std::net::{SocketAddr, IpAddr};
 use std::str::FromStr;
 
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpStream};
 
 const ADDRESS : &'static str = "127.0.0.1";
 
@@ -30,6 +30,20 @@ impl Socket {
       self.remove_addr(port);
 
       return listener;
+    }
+
+    pub async fn connect(&mut self) -> Result<TcpStream, ()> {
+      let client = match TcpStream::connect(self.to_slice()).await {
+        Ok(client) => client,
+        Err(_e) => return Err(()),
+      };
+      let port = client.local_addr().unwrap().port();
+
+      println!("Connected to {:?}", port);
+
+      self.remove_addr(port);
+
+      Ok(client)
     }
 
     fn remove_addr(&mut self, port: u16) {

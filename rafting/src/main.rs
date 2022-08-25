@@ -3,6 +3,7 @@ mod socket;
 use tokio::{net::{TcpListener, TcpStream}, io::AsyncReadExt, io::AsyncWriteExt};
 use bytes::BytesMut;
 use socket::Socket;
+use std::{thread, time};
 
 #[tokio::main]
 async fn main() {
@@ -11,9 +12,20 @@ async fn main() {
 
     let listener = socket_range.bind().await;
 
-    tokio::spawn(async move {
+    let listener_thread = tokio::spawn(async move {
         listen(listener).await;
     });
+
+    match socket_range.connect().await {
+        Ok(client) => {
+            tokio::spawn(async move {
+                process(client).await;
+            });
+        },
+        Err(_) => println!("Could not connect :(")
+    };
+
+    listener_thread.await.unwrap();
 }
 
 async fn listen(listener: TcpListener) {
@@ -34,5 +46,6 @@ async fn process(mut socket: TcpStream) {
         println!("GOT = {:?}", buf);
         buf.clear();
         socket.write_all(b"buf\n").await.unwrap();
+        thread::sleep(time::Duration::from_secs(2));
     }
 }
