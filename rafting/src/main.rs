@@ -1,5 +1,6 @@
 mod socket;
 mod election_timer;
+mod listener;
 
 use election_timer::ElectionTimer;
 use tokio::{net::{TcpListener, TcpStream}, io::AsyncReadExt, io::AsyncWriteExt, sync::Mutex, sync::mpsc, time};
@@ -18,11 +19,8 @@ async fn main() {
     let mut socket_range = Socket::from_vector(vec![3000, 3001]);
     let mut election_timer = ElectionTimer::new(rx);
 
-    let listener = socket_range.bind().await;
-
-    let listener_thread = tokio::spawn(async move {
-        listen(listener).await;
-    });
+    let mut listener = socket_range.bind().await;
+    let port = socket_range.get_port().unwrap();
 
     match socket_range.connect().await {
         Ok(client) => {
@@ -37,31 +35,11 @@ async fn main() {
         election_timer.start().await;
     });
 
+    let listener_thread = listener.start().await;
+
     listener_thread.await.unwrap();
 }
 
-
-async fn listen(listener: TcpListener) {
-    loop {
-        let (socket, _) = listener.accept().await.unwrap();
-
-        tokio::spawn(async move {
-            process(socket).await;
-        });
-    }
-}
-
-async fn process(mut socket: TcpStream) {
-    // Do something
-    let mut buf = BytesMut::with_capacity(10);
-    loop {
-        socket.read_buf(&mut buf).await.unwrap();
-        println!("GOT = {:?}", buf);
-        buf.clear();
-        socket.write_all(b"buf\n").await.unwrap();
-        thread::sleep(time::Duration::from_millis(fastrand::u64(200..300)));
-    }
-}
 
 async fn process_writefirst(mut socket: TcpStream) {
     // Do something

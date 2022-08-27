@@ -1,5 +1,7 @@
+## TODO
 - [x] Simple 2 threads that can communicate with each other and listen on a socket
 - [x] Learn tokio
+- [ ] struct that handles the communication of the different processes
 
 ## Thoughts
 - Threads should always be pinging the available ports (even if failed) in a continuous loop
