@@ -10,7 +10,7 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn from_range(ports: Vec<u16>) -> Socket {
+    pub fn from_vector(ports: Vec<u16>) -> Socket {
         let addrs : Vec<SocketAddr> = ports.clone().into_iter()
         .map(|port| SocketAddr::new(IpAddr::from_str(ADDRESS).unwrap(), port)).collect();
         Socket {addrs: addrs}
@@ -37,7 +37,7 @@ impl Socket {
         Ok(client) => client,
         Err(_e) => return Err(()),
       };
-      let port = client.local_addr().unwrap().port();
+      let port = client.peer_addr().unwrap().port();
 
       println!("Connected to {:?}", port);
 

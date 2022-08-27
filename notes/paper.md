@@ -33,7 +33,7 @@ Actual algo is sections 5 - 8
 
 ### The basics
 - The leader handles all client requests. So it doesn't scale that well? What is the throughput? Bottleneck
-- Followers are passive. Issue no requests but simply resopond to requests from leaders and candidates
+- Followers are passive. Issue no requests but simply respond to requests from leaders and candidates
 - Time divided into terms of arbitrary length
 - Term begins with an election, one or more candidates attempt to become leader
 - On a split vote, term will end with no leader and a new term begins
