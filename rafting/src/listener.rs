@@ -2,16 +2,20 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::time;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::task::JoinHandle;
+use tokio::sync::mpsc::*;
+use tokio::sync::mpsc;
 use bytes::BytesMut;
 use std::sync::Arc;
+use crate::listener_thread::ListenerThread;
 
 pub struct Listener {
   listener: Arc<TcpListener>,
+  sender: Option<Sender<u32>>,
 }
 
 impl Listener {
   pub fn new(listener: TcpListener) -> Listener {
-    Listener {listener: Arc::new(listener)}
+    Listener {listener: Arc::new(listener), sender: None}
   }
 
   async fn listen(listener: Arc<TcpListener>) {
@@ -24,12 +28,14 @@ impl Listener {
     }
   }
 
-  pub async fn start(&mut self) -> JoinHandle<()> {
+  pub async fn start(&mut self) -> ListenerThread {
     let listener = self.listener.clone();
-    let listener_thread = tokio::spawn(async move {
+    let (tx, mut rx) = mpsc::channel(32);
+    self.sender = Some(tx);
+    let listener_handle = tokio::spawn(async move {
         Listener::listen(listener).await;
     });
-    listener_thread
+    ListenerThread {handle: listener_handle, receiver: rx}
   }
 
   async fn process(mut socket: TcpStream) {
