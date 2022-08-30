@@ -13,3 +13,6 @@
 ## Procedure
 Term = 1
 Thread sleep randomized for all servers. When sleep is over send message to elect as leader
+
+Send messages to the other server's on their port. Listen for messages on own port and always respond
+When election timer runs out is the first time a message is sent from the server

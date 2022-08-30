@@ -35,7 +35,7 @@ impl Listener {
     let listener_handle = tokio::spawn(async move {
         Listener::listen(listener).await;
     });
-    ListenerThread {handle: listener_handle, receiver: rx}
+    ListenerThread::new(listener_handle, Some(rx))
   }
 
   async fn process(mut socket: TcpStream) {
