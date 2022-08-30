@@ -35,7 +35,6 @@ async fn main() {
         election_timer.start().await;
     });
 
-
     listener_thread.join().await;
 }
 
