@@ -1,8 +1,6 @@
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::task::JoinHandle;
-use tokio::sync::mpsc::*;
 use tokio::sync::mpsc;
 use bytes::BytesMut;
 use std::sync::Arc;
@@ -17,7 +15,7 @@ impl Listener {
     Listener {listener: Arc::new(listener)}
   }
 
-  async fn listen(listener: Arc<TcpListener>, tx: Sender<u32>) {
+  async fn listen(listener: Arc<TcpListener>, tx: mpsc::Sender<u32>) {
     loop {
       let tx = tx.clone();
       let (socket, _) = listener.accept().await.unwrap();
@@ -37,7 +35,7 @@ impl Listener {
     ListenerThread::new(listener_handle, Some(rx))
   }
 
-  async fn process(mut socket: TcpStream, tx: Sender<u32>) {
+  async fn process(mut socket: TcpStream, tx: mpsc::Sender<u32>) {
     // Do something
     let mut buf = BytesMut::with_capacity(10);
     loop {

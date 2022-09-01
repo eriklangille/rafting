@@ -3,6 +3,8 @@
 - [x] Learn tokio
 - [ ] struct that handles the communication of the different processes
 - [ ] Rewrite socket_range to retry connecting to other ports and do it on a different thread
+- [ ] Use Tokio watch to send note to call an election to different threads. Or maybe use single consumer/producer?
+- [ ] Send messages while leader
 
 ## Thoughts
 - Threads should always be pinging the available ports (even if failed) in a continuous loop

@@ -1,4 +1,4 @@
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, broadcast};
 use tokio::time;
 
 const TIMEOUT_RANGE: std::ops::Range<u64> = 800..1000;
@@ -26,13 +26,14 @@ impl ElectionTimer {
     }
   }
 
-  pub async fn start(&mut self) {
+  pub async fn start(&mut self, tx: broadcast::Sender<u32>) {
       loop {
           let timeout_duration = time::Duration::from_millis(fastrand::u64(TIMEOUT_RANGE));
           let res = time::timeout(timeout_duration, self.wait_for_leader_message()).await;
           if res.is_err() {
               // TODO Call election. Timeout occurred!
               println!("Call an election");
+              tx.send(0);
           }
       }
   }
