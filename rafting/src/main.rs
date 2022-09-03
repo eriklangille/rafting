@@ -2,8 +2,11 @@ mod socket;
 mod election_timer;
 mod listener;
 mod listener_thread;
+mod network;
+mod message;
 
 use election_timer::ElectionTimer;
+use message::Message;
 use tokio::{net::{TcpStream}, io::AsyncReadExt, io::AsyncWriteExt, sync::{Mutex, broadcast}, time};
 use bytes::BytesMut;
 use socket::Socket;
@@ -29,7 +32,7 @@ async fn main() {
         Ok(client) => {
             let rx = tx.subscribe();
             tokio::spawn(async move {
-                process_writefirst(client, rx).await;
+                //TODO: Move to Network
             });
         },
         Err(_) => println!("Could not connect :(")
@@ -40,22 +43,4 @@ async fn main() {
     });
 
     listener_thread.join().await;
-}
-
-
-async fn process_writefirst(mut socket: TcpStream, mut rx: broadcast::Receiver<u32>) {
-    // Do something
-    let mut buf = BytesMut::with_capacity(10);
-    loop {
-        match rx.recv().await.unwrap() {
-            0 => {
-                // Call election
-                socket.write_all(format!("*{}*", "0").as_bytes()).await.unwrap();
-                socket.read_buf(&mut buf).await.unwrap();
-                println!("GOT = {:?}", buf);
-                buf.clear();
-            },
-            _ => println!("Uh oh not implemented"),
-        }
-    }
 }

@@ -2,13 +2,15 @@ use tokio::task::JoinHandle;
 use tokio::sync::mpsc::*;
 use std::mem;
 
+use crate::message::Message;
+
 pub struct ListenerThread {
   handle: JoinHandle<()>,
-  receiver: Option<Receiver<u32>>
+  receiver: Option<Receiver<Message>>
 }
 
 impl ListenerThread {
-  pub fn new(handle: JoinHandle<()>, receiver: Option<Receiver<u32>>) -> ListenerThread {
+  pub fn new(handle: JoinHandle<()>, receiver: Option<Receiver<Message>>) -> ListenerThread {
     ListenerThread { handle: handle, receiver: receiver }
   }
 
@@ -17,7 +19,7 @@ impl ListenerThread {
     handle.await.unwrap();
   }
 
-  pub fn get_receiver(&mut self) -> Receiver<u32> {
+  pub fn get_receiver(&mut self) -> Receiver<Message> {
     mem::replace(&mut self.receiver, None).unwrap()
   }
 }

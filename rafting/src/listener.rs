@@ -1,10 +1,12 @@
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{BufWriter, AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
 use bytes::BytesMut;
+use std::io::Cursor;
 use std::sync::Arc;
 use crate::listener_thread::ListenerThread;
+use crate::message::Message;
 
 pub struct Listener {
   listener: Arc<TcpListener>,
@@ -15,7 +17,7 @@ impl Listener {
     Listener {listener: Arc::new(listener)}
   }
 
-  async fn listen(listener: Arc<TcpListener>, tx: mpsc::Sender<u32>) {
+  async fn listen(listener: Arc<TcpListener>, tx: mpsc::Sender<Message>) {
     loop {
       let tx = tx.clone();
       let (socket, _) = listener.accept().await.unwrap();
@@ -35,16 +37,19 @@ impl Listener {
     ListenerThread::new(listener_handle, Some(rx))
   }
 
-  async fn process(mut socket: TcpStream, tx: mpsc::Sender<u32>) {
-    // Do something
-    let mut buf = BytesMut::with_capacity(10);
+  async fn process(socket: TcpStream, tx: mpsc::Sender<Message>) {
+    let mut buffer = BytesMut::with_capacity(1024);
+    let port = socket.peer_addr().unwrap().port();
+    let mut stream = BufWriter::new(socket);
     loop {
-        socket.read_buf(&mut buf).await.unwrap();
-        println!("GOT = {:?}", buf);
-        tx.send(0).await.unwrap();
-        buf.clear();
-        socket.write_all(b"buf\n").await.unwrap();
-        time::sleep(time::Duration::from_millis(fastrand::u64(200..300))).await;
+        stream.read_buf(&mut buffer).await.unwrap();
+        let mut buf = Cursor::new(&buffer[..]);
+        if let Some(message) = Message::parse_message(&mut buf) {
+          match message {
+            Message::Ping => println!("ping!"),
+            _ => println!("other"),
+          }
+        } 
     }
   }
 }
