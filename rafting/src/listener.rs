@@ -44,7 +44,7 @@ impl Listener {
     loop {
         stream.read_buf(&mut buffer).await.unwrap();
         let mut buf = Cursor::new(&buffer[..]);
-        if let Some(message) = Message::parse_message(&mut buf) {
+        if let Ok(message) = Message::parse_message(&mut buf) {
           match message {
             Message::Ping => println!("ping!"),
             _ => println!("other"),
