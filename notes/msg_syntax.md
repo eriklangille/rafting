@@ -6,6 +6,7 @@ Starts w '*', message type, '*' length of content in bytes, '*', content in asci
 
 ### Ping
 No content. Example: '*0*0*'
+Response. '*0*1*1'
 
 ### Election
 Call an election. One piece of data representing the id (port) in ascii of the server voting. '*1*4*3001'

@@ -7,6 +7,7 @@ use tokio::net::{TcpListener, TcpStream};
 
 use crate::listener;
 use crate::message::Message;
+use crate::ElectionTimer;
 
 const ADDRESS : &'static str = "127.0.0.1";
 
@@ -20,9 +21,32 @@ impl Network {
     .map(|port| SocketAddr::new(IpAddr::from_str(ADDRESS).unwrap(), *port))
     .collect();
 
-    let listener = TcpListener::bind(&addrs[..]).await.unwrap();
+    let (election_tx, election_rx) = mpsc::channel(8);
+    let (tx, _rx) = broadcast::channel(8); //TODO: Wire up receiver to thread connected to other servers
+    let mut election_timer = ElectionTimer::new(election_rx);
 
-    let listener_thread = listener::Listener::new(listener);
+    let tcp_listener = TcpListener::bind(&addrs[..]).await.unwrap();
+
+    let mut listener = listener::Listener::new(tcp_listener);
+    let mut listener_thread = listener.start().await;
+    let mut rx = listener_thread.get_receiver();
+
+    tokio::spawn(async move {
+      while let Some(msg) = rx.recv().await {
+        match msg {
+          Message::Ping => {
+            let _ = election_tx.send(msg).await;
+          },
+          _ => {
+            println!("uh oh :(");
+          }
+        }
+      }
+    });
+
+    tokio::spawn(async move {
+        election_timer.start(tx).await;
+    });
 
     // TODO: Message processor that uses the right sender depending on the contents of the message
     

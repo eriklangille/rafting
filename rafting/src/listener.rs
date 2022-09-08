@@ -46,7 +46,10 @@ impl Listener {
         let mut buf = Cursor::new(&buffer[..]);
         if let Ok(message) = Message::parse_message(&mut buf) {
           match message {
-            Message::Ping => println!("ping!"),
+            Message::Ping => { 
+              tx.send(message).await;
+              stream.write_buf(&mut "*0*1*1".as_bytes());
+            },
             _ => println!("other"),
           }
         } 
