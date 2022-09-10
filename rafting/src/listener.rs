@@ -10,11 +10,13 @@ use crate::message::Message;
 
 pub struct Listener {
   listener: Arc<TcpListener>,
+  port: u16,
 }
 
 impl Listener {
   pub fn new(listener: TcpListener) -> Listener {
-    Listener {listener: Arc::new(listener)}
+    let port = listener.local_addr().unwrap().port();
+    Listener {listener: Arc::new(listener), port: port}
   }
 
   async fn listen(listener: Arc<TcpListener>, tx: mpsc::Sender<Message>) {
@@ -26,6 +28,10 @@ impl Listener {
           Listener::process(socket, tx).await;
       });
     }
+  }
+
+  pub fn get_port(&self) -> u16 {
+    return self.port
   }
 
   pub async fn start(&mut self) -> ListenerThread {
@@ -48,7 +54,7 @@ impl Listener {
           match message {
             Message::Ping => { 
               tx.send(message).await;
-              stream.write_buf(&mut "*0*1*1".as_bytes());
+              stream.write_buf(&mut "*0*1*1".as_bytes()).await;
             },
             _ => println!("other"),
           }

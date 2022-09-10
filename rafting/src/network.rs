@@ -4,39 +4,46 @@ use std::str::FromStr;
 
 use tokio::sync::{broadcast, mpsc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::time;
 
 use crate::listener;
+use crate::listener_thread::ListenerThread;
 use crate::message::Message;
 use crate::ElectionTimer;
+use crate::socket::Socket;
 
 const ADDRESS : &'static str = "127.0.0.1";
 
 pub struct Network {
-  connections: Arc<Mutex<Vec<broadcast::Sender<Message>>>>,
+  // connections: Arc<Mutex<Vec<mpsc::Sender<Message>>>>, // If switching to MPSC use this
+  sender: broadcast::Sender<Message>,
+  pub listener_thread: ListenerThread
 }
 
-impl Network {
+impl Network { // Receiver and sender handler of the connected sockets
   pub async fn from_slice(ports: &[u16]) -> Network {
-    let addrs : Vec<SocketAddr> = ports.into_iter()
-    .map(|port| SocketAddr::new(IpAddr::from_str(ADDRESS).unwrap(), *port))
-    .collect();
+    let mut sockets = Socket::from_port_slice(ports);
 
     let (election_tx, election_rx) = mpsc::channel(8);
     let (tx, _rx) = broadcast::channel(8); //TODO: Wire up receiver to thread connected to other servers
     let mut election_timer = ElectionTimer::new(election_rx);
 
-    let tcp_listener = TcpListener::bind(&addrs[..]).await.unwrap();
-
-    let mut listener = listener::Listener::new(tcp_listener);
+    let mut listener = sockets.bind().await;
     let mut listener_thread = listener.start().await;
     let mut rx = listener_thread.get_receiver();
+    let port = listener.get_port();
 
+    // Incoming Message handler from listeners (Remove from Network?)
+    let tx2 = tx.clone();
     tokio::spawn(async move {
       while let Some(msg) = rx.recv().await {
         match msg {
           Message::Ping => {
             let _ = election_tx.send(msg).await;
           },
+          Message::Election { sender } => {
+            let _ = tx2.send(Message::Vote { id: sender }).unwrap();
+          }
           _ => {
             println!("uh oh :(");
           }
@@ -44,12 +51,34 @@ impl Network {
       }
     });
 
+    // Sender handler - Send outgoing messages
+    let tx3 = tx.clone();
     tokio::spawn(async move {
-        election_timer.start(tx).await;
+      loop { //TODO: pause loop when all servers are connected
+        match sockets.connect().await {
+            Ok(client) => {
+                let mut rx = tx3.subscribe();
+                tokio::spawn(async move {
+                    match rx.recv().await.unwrap() {
+                      Message::Election { sender } => {println!("hmm {:?}", sender)},
+                      _ => unimplemented!()
+                    }
+                });
+            },
+            Err(_) => {
+              // Could not connect. Retry again
+              time::sleep(time::Duration::from_millis(fastrand::u64(200..300))).await;
+            },
+        };
+      }
     });
 
-    // TODO: Message processor that uses the right sender depending on the contents of the message
-    
-    Network {connections: Arc::new(Mutex::new(Vec::new()))}
+    // Election timer handler (Remove from Network)
+    let tx4 = tx.clone();
+    tokio::spawn(async move {
+        election_timer.start(port, tx4).await;
+    });
+
+    Network {sender: tx, listener_thread: listener_thread}
   }
 }

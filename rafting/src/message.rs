@@ -7,6 +7,7 @@ use atoi::FromRadix10;
 pub enum Message {
   Ping,
   Election {sender: u16},
+  Vote {id: u16},
 }
 
 pub enum Error {

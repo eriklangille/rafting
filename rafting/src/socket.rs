@@ -19,7 +19,13 @@ impl Socket {
         Socket {addrs: addrs, port: None, connections: Vec::new()}
     }
 
-    fn to_slice(&self) -> &[SocketAddr] {
+    pub fn from_port_slice(ports: &[u16]) -> Socket {
+        let addrs : Vec<SocketAddr> = ports.into_iter()
+        .map(|port| SocketAddr::new(IpAddr::from_str(ADDRESS).unwrap(), *port)).collect();
+        Socket {addrs: addrs, port: None, connections: Vec::new()}
+    }
+
+    pub fn to_slice(&self) -> &[SocketAddr] {
         &self.addrs[..]
     }
 
@@ -55,7 +61,7 @@ impl Socket {
       Ok(client)
     }
 
-    fn remove_addr(&mut self, port: u16) {
+    pub fn remove_addr(&mut self, port: u16) {
       self.addrs = self.addrs.clone().into_iter().filter(|socket| socket.port() != port).collect();
     }
 }
