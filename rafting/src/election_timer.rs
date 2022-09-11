@@ -35,7 +35,7 @@ impl ElectionTimer {
           if res.is_err() {
               // TODO Call election. Timeout occurred!
               println!("Call an election");
-              tx.send(Message::Election { sender: id }).unwrap(); //TODO: Handle error when not connected to any other servers
+              tx.send(Message::ElectionRequest { id: id }).unwrap(); //TODO: Handle error when not connected to any other servers
           }
       }
   }

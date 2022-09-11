@@ -1,12 +1,9 @@
-use std::sync::Arc;
-use std::net::{SocketAddr, IpAddr};
-use std::str::FromStr;
-
-use tokio::sync::{broadcast, mpsc, Mutex};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::io::AsyncWriteExt;
+use tokio::io::BufWriter;
+use tokio::sync::{broadcast, mpsc};
 use tokio::time;
 
-use crate::listener;
+use crate::{socket};
 use crate::listener_thread::ListenerThread;
 use crate::message::Message;
 use crate::ElectionTimer;
@@ -41,8 +38,8 @@ impl Network { // Receiver and sender handler of the connected sockets
           Message::Ping => {
             let _ = election_tx.send(msg).await;
           },
-          Message::Election { sender } => {
-            let _ = tx2.send(Message::Vote { id: sender }).unwrap();
+          Message::ElectionRequest { id } => {
+            let _ = tx2.send(Message::ElectionRequest { id: id }).unwrap();
           }
           _ => {
             println!("uh oh :(");
@@ -51,21 +48,29 @@ impl Network { // Receiver and sender handler of the connected sockets
       }
     });
 
-    // Sender handler - Send outgoing messages
+    // Sender handler - Send outgoing messages - send requests and get responses
     let tx3 = tx.clone();
     tokio::spawn(async move {
-      loop { //TODO: pause loop when all servers are connected
+      loop {
         match sockets.connect().await {
             Ok(client) => {
                 let mut rx = tx3.subscribe();
                 tokio::spawn(async move {
-                    match rx.recv().await.unwrap() {
-                      Message::Election { sender } => {println!("hmm {:?}", sender)},
-                      _ => unimplemented!()
+                    let mut stream = BufWriter::new(client);
+                    while let Ok(msg) = rx.recv().await {
+                      match msg {
+                        Message::ElectionRequest { id } => {
+                          stream.write_buf(&mut format!("*1*4*{}", id).as_bytes()).await; // Election Response
+                        },
+                        _ => unimplemented!()
+                      }
                     }
                 });
             },
-            Err(_) => {
+            Err(socket::Error::AllConnected) => {
+              break; //TODO: Respawn this thread when a server disconnects
+            }
+            Err(socket::Error::CouldntConnect) => {
               // Could not connect. Retry again
               time::sleep(time::Duration::from_millis(fastrand::u64(200..300))).await;
             },
@@ -80,5 +85,9 @@ impl Network { // Receiver and sender handler of the connected sockets
     });
 
     Network {sender: tx, listener_thread: listener_thread}
+  }
+
+  pub fn get_tx_copy(&self) -> broadcast::Sender<Message> {
+    return self.sender.clone();
   }
 }

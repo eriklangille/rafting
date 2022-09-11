@@ -6,8 +6,11 @@ use atoi::FromRadix10;
 #[derive(Clone)]
 pub enum Message {
   Ping,
-  Election {sender: u16},
-  Vote {id: u16},
+  PingResponse,
+  ElectionRequest {id: u16},
+  ElectionResponse {id: u16},
+  RequestVoteRequest {term: u32, candidate_id: u16, last_log_index: u32, last_log_term: u32},
+  RequestVoteResponse {term: u32, vote_granted: bool},
 }
 
 pub enum Error {
@@ -44,7 +47,7 @@ impl Message {
               if port.1 == 0 {
                 return Err(Error::Incomplete);
               }
-              return Ok(Message::Election { sender: port.0 });
+              return Ok(Message::ElectionRequest { id: port.0 });
             }
           }
         },

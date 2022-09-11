@@ -1,5 +1,4 @@
 use tokio::net::{TcpListener, TcpStream};
-use tokio::time;
 use tokio::io::{BufWriter, AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
 use bytes::BytesMut;
@@ -43,9 +42,9 @@ impl Listener {
     ListenerThread::new(listener_handle, Some(rx))
   }
 
+  // Listener: Listen for requests and send responses
   async fn process(socket: TcpStream, tx: mpsc::Sender<Message>) {
     let mut buffer = BytesMut::with_capacity(1024);
-    let port = socket.peer_addr().unwrap().port();
     let mut stream = BufWriter::new(socket);
     loop {
         stream.read_buf(&mut buffer).await.unwrap();
@@ -54,8 +53,12 @@ impl Listener {
           match message {
             Message::Ping => { 
               tx.send(message).await;
-              stream.write_buf(&mut "*0*1*1".as_bytes()).await;
+              stream.write_buf(&mut "*0*1*1".as_bytes()).await; // Ping response
             },
+            Message::ElectionRequest {id} => {
+              tx.send(message).await;
+              stream.write_buf(&mut format!("*1*4*{}", id).as_bytes()).await; // Election Response
+            }
             _ => println!("other"),
           }
         } 

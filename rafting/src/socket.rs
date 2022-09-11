@@ -10,19 +10,19 @@ pub struct Socket {
     addrs: Vec<SocketAddr>,
     port: Option<u16>,
     connections: Vec<u16>,
+    total: u32,
+}
+pub enum Error {
+  AllConnected,
+  CouldntConnect,
 }
 
 impl Socket {
-    pub fn from_vector(ports: Vec<u16>) -> Socket {
-        let addrs : Vec<SocketAddr> = ports.clone().into_iter()
-        .map(|port| SocketAddr::new(IpAddr::from_str(ADDRESS).unwrap(), port)).collect();
-        Socket {addrs: addrs, port: None, connections: Vec::new()}
-    }
-
     pub fn from_port_slice(ports: &[u16]) -> Socket {
         let addrs : Vec<SocketAddr> = ports.into_iter()
         .map(|port| SocketAddr::new(IpAddr::from_str(ADDRESS).unwrap(), *port)).collect();
-        Socket {addrs: addrs, port: None, connections: Vec::new()}
+        let total = addrs.len() as u32;
+        Socket {addrs: addrs, port: None, connections: Vec::new(), total: total}
     }
 
     pub fn to_slice(&self) -> &[SocketAddr] {
@@ -31,6 +31,10 @@ impl Socket {
 
     pub fn get_port(&self) -> Option<u16> {
       self.port.clone()
+    }
+
+    pub fn get_connection_count(&self) -> u32 {
+      self.connections.len() as u32
     }
 
     pub async fn bind(&mut self) -> Listener {
@@ -46,10 +50,13 @@ impl Socket {
       Listener::new(listener)
     }
 
-    pub async fn connect(&mut self) -> Result<TcpStream, ()> {
+    pub async fn connect(&mut self) -> Result<TcpStream, Error> {
+      if self.addrs.len() == 0 {
+        return Err(Error::AllConnected)
+      }
       let client = match TcpStream::connect(self.to_slice()).await {
         Ok(client) => client,
-        Err(_e) => return Err(()),
+        Err(_e) => return Err(Error::CouldntConnect),
       };
       let port = client.peer_addr().unwrap().port();
       self.connections.push(port);
