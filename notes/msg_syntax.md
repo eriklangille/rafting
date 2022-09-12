@@ -27,4 +27,4 @@ voteGranted - true means candidate received vote
 
 ### Receiver Implementation:
 1. Reply false term < currentTerm
-2. If votedFor is null or candidateId, and candidate's log is at least up-to-date as receiver's log, grant vote
+2. If votedFor is null or candidateId, and candidate's log is at least up-to-date as receiver's log, grant vote (reply true)

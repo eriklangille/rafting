@@ -2,8 +2,7 @@ use std::{io::Cursor};
 use bytes::Buf;
 use atoi::FromRadix10;
 
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Message {
   Ping,
   PingResponse,

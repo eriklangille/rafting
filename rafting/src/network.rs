@@ -6,6 +6,7 @@ use tokio::time;
 use crate::{socket};
 use crate::listener_thread::ListenerThread;
 use crate::message::Message;
+use crate::internal_message::InternalMessage;
 use crate::ElectionTimer;
 use crate::socket::Socket;
 
@@ -36,7 +37,7 @@ impl Network { // Receiver and sender handler of the connected sockets
       while let Some(msg) = rx.recv().await {
         match msg {
           Message::Ping => {
-            let _ = election_tx.send(msg).await;
+            let _ = election_tx.send(InternalMessage::Ping).await;
           },
           Message::ElectionRequest { id } => {
             let _ = tx2.send(Message::ElectionRequest { id: id }).unwrap();

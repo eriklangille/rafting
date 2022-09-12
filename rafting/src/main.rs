@@ -4,11 +4,11 @@ mod listener;
 mod listener_thread;
 mod network;
 mod message;
+mod internal_message;
 
 use election_timer::ElectionTimer;
 use network::Network;
 use tokio::{net::{TcpStream}, io::AsyncReadExt, io::AsyncWriteExt, sync::{Mutex, broadcast}, time};
-use crate::socket::Socket;
 use std::{thread, sync::Arc};
 
 type Ledger = Arc<Mutex<Vec<u64>>>;
