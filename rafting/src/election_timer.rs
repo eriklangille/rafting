@@ -29,14 +29,14 @@ impl ElectionTimer {
     }
   }
 
-  pub async fn start(&mut self, id: u16, tx: broadcast::Sender<InternalMessage>) {
+  pub async fn start(&mut self, id: u16, tx: broadcast::Sender<Message>) {
       loop {
           let timeout_duration = time::Duration::from_millis(fastrand::u64(TIMEOUT_RANGE));
           let res = time::timeout(timeout_duration, self.wait_for_leader_message()).await;
           if res.is_err() {
               // TODO Call election. Timeout occurred!
               println!("Call an election");
-              tx.send(InternalMessage::ElectionTimer).unwrap(); //TODO: Handle error when not connected to any other servers
+              tx.send(Message::ElectionRequest { id: id }).unwrap(); //TODO: Handle error when not connected to any other servers
           }
       }
   }
