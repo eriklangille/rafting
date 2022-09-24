@@ -39,7 +39,7 @@ impl Network { // Receiver and sender handler of the connected sockets
           Message::Ping => {
             let _ = election_tx.send(InternalMessage::Ping).await;
           },
-          Message::ElectionRequest { id } => {
+          Message::ElectionRequest { id, response} => {
             let _ = tx2.send(Message::ElectionRequest { id: id }).unwrap();
           }
           _ => {

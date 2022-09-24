@@ -19,3 +19,29 @@ Thread sleep randomized for all servers. When sleep is over send message to elec
 
 Send messages to the other server's on their port. Listen for messages on own port and always respond
 When election timer runs out is the first time a message is sent from the server
+
+### TX/RX
+- Receivers and senders should both implement message
+- I want to be able to subscribe to certain events from the network.
+
+eg:
+
+network.when(Message::RequestVote, msg -> {
+  if (msg.term < currentTerm) {
+    msg.response(Response::new {currentTerm, false})
+  }
+  else {
+    msg.response(Response::new {currentTerm, false})
+  }
+})
+
+or
+
+network.when(Message::RequestVote, request -> {
+  if (request.term < currentTerm) {
+    return Response::RequestVote {currentTerm, false}
+  }
+  else {
+    return Response::RequestVote {currentTerm, false}
+  }
+})

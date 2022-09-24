@@ -1,23 +1,41 @@
 use std::{io::Cursor};
 use bytes::Buf;
 use atoi::FromRadix10;
+use tokio::sync::oneshot;
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
-pub enum Message {
+pub enum Request {
   Ping,
-  PingResponse,
-  ElectionRequest {id: u16},
-  ElectionResponse {id: u16},
-  RequestVoteRequest {term: u32, candidate_id: u16, last_log_index: u32, last_log_term: u32},
-  RequestVoteResponse {term: u32, vote_granted: bool},
+  RequestVote {term: u32, candidate_id: u16, last_log_index: u32, last_log_term: u32},
 }
+
+#[derive(Clone, Debug)]
+pub enum Response {
+  Ping,
+  RequestVote {term: u32, vote_granted: bool},
+}
+
+#[derive(Clone, Debug)]
+pub struct Message {
+  request: Request,
+  response: Arc<Responder>,
+}
+
+type Responder = oneshot::Sender<Response>;
 
 pub enum Error {
   Incomplete,
 }
 
 impl Message {
-  pub fn parse_message(src: &mut Cursor<&[u8]>) -> Result<Message, Error> {
+  pub fn new(request: Request, response: Arc<Responder>) -> Message {
+    Message { request: request, response: response }
+  }
+}
+
+impl Request {
+  pub fn parse_message(src: &mut Cursor<&[u8]>) -> Result<Request, Error> {
     let mut message_type = None;
     let mut content_length = None;
     loop {
@@ -34,7 +52,7 @@ impl Message {
               if length == 0 {
                 if let Some(msg) = message_type {
                   if msg == 0 {
-                    return Ok(Message::Ping);
+                    return Ok(Request::Ping);
                   }
                   return Err(Error::Incomplete);
                 }
@@ -46,14 +64,14 @@ impl Message {
               if port.1 == 0 {
                 return Err(Error::Incomplete);
               }
-              return Ok(Message::ElectionRequest { id: port.0 });
+              return Ok(Request::RequestVote { term: 0, candidate_id: port.0, last_log_index: 0, last_log_term: 0 });
             }
           }
         },
         _ => break,
       }
     }
-    Ok(Message::Ping)
+    Ok(Request::Ping)
   }
 }
 
