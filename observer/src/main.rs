@@ -1,60 +1,70 @@
-// Inspired heavily by: https://github.com/lpxxn/rust-design-pattern/blob/master/behavioral/observer.rs
-pub enum Message {
+// Inspired by: https://github.com/lpxxn/rust-design-pattern/blob/master/behavioral/observer.rs
+use std::sync::Weak;
+use std::sync::Arc;
+
+pub struct Message {
+    request: Request,
+}
+
+type Callback = Weak<Func>;
+type Func = dyn Fn(Request) -> Response;
+
+#[derive(Debug, Clone, Copy)]
+pub enum Request {
     Option1,
     Option2 {random_param: u32}
 }
 
-trait IObserver {
-    fn update(&self, msg: &Message);
+#[derive(Debug, Clone, Copy)]
+pub enum Response {
+    Option1,
+    Option2 {random_param2: u32}
 }
 
-trait INetwork<'a, T: IObserver> {
-    fn when(&mut self, msg: Message, observer: &'a T);
-    fn notify_observers(&self, msg: &Message);
+trait INetwork {
+    fn when(&mut self, msg: Request, observer: Callback);
+    fn notify_observers(&self, msg: Request);
 }
 
-struct Network<'a, T: IObserver> {
-    observers: Vec<&'a T>
+struct Network {
+    observers: Vec<Callback>
 }
 
-impl <'a, T: IObserver + PartialEq> Network<'a, T> {
-    fn new() -> Network <'a, T> {
+impl Network {
+    fn new() -> Network {
         Network {
             observers: Vec::new()
         }
     }
 }
 
-impl <'a, T: IObserver + PartialEq> INetwork<'a, T> for Network<'a, T> {
-    fn when(&mut self, msg: Message, observer: &'a T) {
+impl INetwork for Network {
+    fn when(&mut self, msg: Request, observer: Callback) {
         self.observers.push(observer);
     }
-    fn notify_observers(&self, msg: &Message) {
+    fn notify_observers(&self, msg: Request) {
         for item in self.observers.iter() {
-            item.update(msg);
+            if let Some(function) = item.upgrade() {
+                function(msg);
+            }
         }
     }
 }
 
-#[derive(PartialEq)]
-struct MessageObserver {
-}
-impl IObserver for MessageObserver {
-    fn update(&self, msg: &Message) {
-        match msg {
-            Message::Option1 => println!("Option 1"),
-            Message::Option2 {..} => println!("Ayy yo we don't do Option 2"),
-        }
-    }
+fn code_test(msg: Request) -> Response {
+    println!("hey a message {:?}", msg);
+    return Response::Option1 {}
 }
 
 fn main() {
     let mut network = Network::new();
-    let observer = MessageObserver {};
-    network.when(Message::Option1, &observer);
+    let arc = Arc::new(code_test);
+    let downgrade = Arc::downgrade(&arc);
 
-    let msg = Message::Option1 {};
-    let msg2 = Message::Option2 {random_param: 10};
-    network.notify_observers(&msg);
-    network.notify_observers(&msg2);
+    network.when(Request::Option1, downgrade);
+
+    let msg = Request::Option1 {};
+    let msg2 = Request::Option2 {random_param: 10};
+    network.notify_observers(msg);
+    network.notify_observers(msg2);
 }

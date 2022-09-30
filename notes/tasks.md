@@ -35,9 +35,9 @@ network.when(Message::RequestVote, msg -> {
   }
 })
 
-or
+refined:
 
-network.when(Message::RequestVote, request -> {
+network.when(Request::RequestVote {..}, request -> {
   if (request.term < currentTerm) {
     return Response::RequestVote {currentTerm, false}
   }
