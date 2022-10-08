@@ -2,6 +2,8 @@
 use std::sync::Weak;
 use std::sync::Arc;
 
+mod messenger;
+
 pub struct Message {
     request: Request,
 }
@@ -57,14 +59,16 @@ fn code_test(msg: Request) -> Response {
 }
 
 fn main() {
-    let mut network = Network::new();
-    let arc = Arc::new(code_test);
-    let downgrade = Arc::downgrade(&arc);
+    // let mut network = Network::new();
+    // let arc = Arc::new(code_test);
+    // let downgrade = Arc::downgrade(&arc);
 
-    network.when(Request::Option1, downgrade);
+    // network.when(Request::Option1, downgrade);
 
-    let msg = Request::Option1 {};
-    let msg2 = Request::Option2 {random_param: 10};
-    network.notify_observers(msg);
-    network.notify_observers(msg2);
+    // let msg = Request::Option1 {};
+    // let msg2 = Request::Option2 {random_param: 10};
+    // network.notify_observers(msg);
+    // network.notify_observers(msg2);
+
+    messenger::test();
 }
